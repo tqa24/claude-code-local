@@ -120,6 +120,43 @@ LAUNCHER
 
 chmod +x "$HOME/Desktop/Claude Local.command"
 
+# ── Install iMessage / Screen-to-Phone tools ─────────────────
+echo "Setting up iMessage phone control tools..."
+CLAUDE_DIR="$HOME/.claude"
+mkdir -p "$CLAUDE_DIR"
+
+PHONE_SCRIPTS=(
+  "scripts/imessage-send.sh"
+  "scripts/imessage-send-image.sh"
+  "scripts/imessage-send-video.sh"
+  "scripts/imessage-toggle.sh"
+  "scripts/imessage-receive.sh"
+)
+
+MISSING=0
+for s in "${PHONE_SCRIPTS[@]}"; do
+  if [ -f "$SCRIPT_DIR/$s" ]; then
+    cp "$SCRIPT_DIR/$s" "$CLAUDE_DIR/$(basename $s)"
+    chmod +x "$CLAUDE_DIR/$(basename $s)"
+  else
+    MISSING=1
+  fi
+done
+
+if [ "$MISSING" -eq 0 ]; then
+  echo "  ✅ Phone tools installed to ~/.claude/"
+  echo ""
+  echo "  → Configure your phone number:"
+  if [ ! -f "$SCRIPT_DIR/config.sh" ]; then
+    cp "$SCRIPT_DIR/config.example.sh" "$SCRIPT_DIR/config.sh" 2>/dev/null || true
+    echo "  → Edit config.sh with your iPhone number + Apple ID"
+  fi
+  cp "$SCRIPT_DIR/config.sh" "$CLAUDE_DIR/screen-to-phone-config.sh" 2>/dev/null || true
+else
+  echo "  ⚠️  Phone scripts not found — clone claude-screen-to-phone alongside this repo"
+  echo "     https://github.com/nicedreamzapp/claude-screen-to-phone"
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════════════╗"
 echo "║     Setup complete!                              ║"
@@ -131,6 +168,9 @@ echo "║  Launcher: ~/Desktop/Claude Local.command"
 echo "║                                                  ║"
 echo "║  Double-click 'Claude Local' on your Desktop     ║"
 echo "║  to start coding with local AI.                  ║"
+echo "║                                                  ║"
+echo "║  📱 Phone control: ~/.claude/imessage-send.sh    ║"
+echo "║     Fill in config.sh with your phone number    ║"
 echo "║                                                  ║"
 echo "╚══════════════════════════════════════════════════╝"
 echo ""

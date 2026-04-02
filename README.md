@@ -36,30 +36,37 @@ Your MacBook has a powerful GPU built right into the chip. This project uses tha
 
 ---
 
-## 📱 Control From Your Phone
+## 📱 Control From Your Phone — Full Media Pipeline
 
-You don't have to be at your Mac to use this. We built a remote control pipeline:
+You don't have to be at your Mac to use this. Text a command, get back a full video.
 
 ```
 📱 Your iPhone                    💻 Your Mac
      │                                │
-     │── iMessage ──────────────────>│
-     │                                │── Claude Code
-     │                                │── MLX Server
-     │                                │── Qwen 3.5 122B
-     │                                │── (does the work)
-     │<── iMessage response ────────│
+     │── "find me an article  ──────>│── imessage-receive.sh reads it
+     │    and send me a video"        │── Qwen 3.5 122B plans the task
+     │                                │── Brave browser finds the article
+     │                                │── speak narrates in your voice
+     │                                │── Studio Record captures it all
+     │                                │── build_production_video.py edits it
+     │<── 🎥 video in iMessage ──────│── imessage-send-video.sh ships it
      │                                │
    🛋️ From your couch            🖥️ At your desk
 ```
 
-**How it works:**
-- 📲 Send a message from your phone via iMessage
-- 🤖 Claude Code receives it and runs the task on your local AI
-- 💬 Response comes back to your phone
-- ✈️ Works anywhere your Mac has power — even offline for the AI part
+**Everything works — text, images, and video:**
 
-We built this **before** Anthropic shipped their Dispatch feature. Same concept, but ours uses iMessage and runs on your local model instead of cloud.
+| Command | What happens | You get |
+|---|---|---|
+| "summarize this article" | Qwen reads + replies | 💬 Text |
+| "send me a screenshot of X" | Claude screenshots | 📸 Image in iMessage |
+| "screen record you doing Y" | Records + sends | 🎥 Video in iMessage |
+| "make me a produced video" | Full edit pipeline | 🎬 Title card + subs |
+
+**Full pipeline repo:** [nicedreamzapp/claude-screen-to-phone](https://github.com/nicedreamzapp/claude-screen-to-phone)
+→ Clone it, run `setup.sh`, fill in your phone number. Works with this local AI stack or Claude cloud.
+
+We built this **before** Anthropic shipped their Dispatch feature. Same concept, but ours uses iMessage, runs on your local model, and can send back media — not just text.
 
 > 💡 **Pro tip:** Anthropic's Dispatch doesn't read your CLAUDE.md. Mention it in your message or it'll miss your custom setup. Our iMessage system doesn't have this problem.
 
