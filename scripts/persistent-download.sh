@@ -1,22 +1,26 @@
 #!/bin/bash
-# Persistent Ollama download — auto-restarts on every failure
-# Run with: bash ~/qwen3.5-122b/persistent-download.sh
+# Persistent model download — auto-restarts on every failure.
+# Useful for big models (Qwen 122B is ~75 GB) on flaky connections.
+#
+# Usage:
+#   bash scripts/persistent-download.sh                              # default Gemma 4 31B
+#   bash scripts/persistent-download.sh qwen                         # Qwen 3.5 122B
+#   bash scripts/persistent-download.sh llama                        # Llama 3.3 70B
+#   MLX_MODEL=<hf-id> bash scripts/persistent-download.sh
 
-echo "=== Persistent Ollama Download ==="
-echo "Will keep retrying until qwen3.5:122b is fully downloaded."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+echo "=== Persistent MLX model download ==="
+echo "Will keep retrying until the model is fully cached."
 echo ""
 
 while true; do
-  echo "[$(date)] Starting ollama pull..."
-  ollama pull qwen3.5:122b 2>&1
-
-  # Check if it succeeded
-  if ollama list | grep -q "qwen3.5:122b"; then
+  echo "[$(date)] Starting download attempt..."
+  if bash "$SCRIPT_DIR/download-and-import.sh" "$@"; then
     echo ""
-    echo "=== DONE! qwen3.5:122b is ready ==="
+    echo "=== DONE! Model is ready ==="
     break
   fi
-
   echo "[$(date)] Download dropped. Restarting in 10s..."
   sleep 10
 done

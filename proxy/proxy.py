@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-Claude Local Proxy — Translates Anthropic Messages API to Ollama OpenAI API.
-Purpose-built for running Claude Code with local Qwen 3.5 models on Apple Silicon.
+Claude Local Proxy — LEGACY Ollama path.
+
+Translates Anthropic Messages API to Ollama / llama.cpp OpenAI API.
+Kept for users who want the old Ollama route. The recommended path is now
+the MLX Native Anthropic Server (`proxy/server.py`) — it speaks Anthropic
+directly, no translation layer, ~7.5x faster on real Claude Code tasks.
 """
 
 import json

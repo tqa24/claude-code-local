@@ -1,6 +1,6 @@
 # 📱 iMessage Media Pipeline — Fully Working
 
-> **All of this works with both Claude Code (cloud) and your local Qwen 3.5 122B model.**
+> **All of this works with Claude Code (cloud) AND any model in the local lineup — Gemma 4 31B, Llama 3.3 70B, or Qwen 3.5 122B.**
 > The scripts are pure shell/AppleScript — the AI just calls them. Model doesn't matter.
 
 ---
@@ -72,7 +72,7 @@ curl -X POST http://127.0.0.1:17494/stop               # stop + save
 🔄 imessage-receive.sh picks up your message
      │
      ▼
-🤖 Claude / Qwen 3.5 122B (local) receives the task
+🤖 Claude / your local model (Gemma · Llama · Qwen) receives the task
      │
      ├── curl 17494/start?mode=screen   ← start recording
      ├── Brave browser → finds article
@@ -98,4 +98,4 @@ All scripts and Studio Record are in a separate standalone repo:
 
 That repo is self-contained — Mac + iPhone users can clone it, run `setup.sh`, and have the full pipeline without needing the local AI stack.
 
-**This repo** (`claude-code-local`) wires it into your local AI so Qwen 3.5 122B is doing the thinking instead of Claude cloud.
+**This repo** (`claude-code-local`) wires it into your local AI so a model from the lineup (Gemma 4 31B, Llama 3.3 70B, or Qwen 3.5 122B) is doing the thinking instead of Claude cloud.

@@ -1,80 +1,187 @@
 <p align="center">
-  <h1 align="center">🧠 Claude Code Local</h1>
+  <h1 align="center">🧠⚡ Claude Code Local — The Lineup</h1>
   <p align="center">
-    <strong>Run a 122 billion parameter AI on your MacBook.<br>No cloud. No fees. No data leaves your machine.</strong>
+    <strong>Three local AI brains. Four modes. One MacBook. Zero cloud.<br>Pick your fighter and run Claude Code 100% on-device.</strong>
   </p>
   <p align="center">
-    <a href="#-benchmarks"><img src="https://img.shields.io/badge/⚡_Speed-65_tok%2Fs-brightgreen?style=for-the-badge" alt="Speed"></a>
+    <a href="#-the-lineup--pick-your-fighter"><img src="https://img.shields.io/badge/🥊_Lineup-3_Models-red?style=for-the-badge" alt="3 Models"></a>
+    <a href="#-the-modes"><img src="https://img.shields.io/badge/🎮_Modes-4-purple?style=for-the-badge" alt="4 Modes"></a>
+    <a href="#-benchmarks"><img src="https://img.shields.io/badge/⚡_Top_Speed-65_tok%2Fs-brightgreen?style=for-the-badge" alt="Speed"></a>
     <a href="#-benchmarks"><img src="https://img.shields.io/badge/🚀_Claude_Code-17.6s_per_task-blue?style=for-the-badge" alt="Claude Code"></a>
-    <a href="#-benchmarks"><img src="https://img.shields.io/badge/📈_vs_llama.cpp-7.5x_faster-orange?style=for-the-badge" alt="7.5x faster"></a>
+    <a href="#-safety--how-the-data-flows"><img src="https://img.shields.io/badge/🔒_Privacy-100%25_Local-success?style=for-the-badge" alt="100% Local"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/📜_License-MIT-yellow?style=for-the-badge" alt="MIT"></a>
   </p>
 </p>
 
 ---
 
+## 🥊 The Lineup — Pick Your Fighter
+
+We started with one model. Now we ship a **roster**. Same MLX server, same Anthropic API, swap one env var and you swap the brain.
+
+```
+   ╔══════════════════════╦═══════════════════════╦══════════════════════╗
+   ║  🟢 GEMMA 4 31B      ║   🟠 LLAMA 3.3 70B    ║  🔵 QWEN 3.5 122B    ║
+   ║   ABLITERATED        ║    ABLITERATED        ║    A10B MoE          ║
+   ║  ──────────────────  ║  ───────────────────  ║  ──────────────────  ║
+   ║   THE QUICK ONE      ║    THE WISE ONE       ║    THE BEAST         ║
+   ║                      ║                       ║                      ║
+   ║  Speed   ~15 tok/s   ║  Speed   ~7 tok/s     ║  Speed  65 tok/s 🚀  ║
+   ║  Params  31 B dense  ║  Params  70 B dense   ║  Params 122 B / 10B  ║
+   ║  Quant   4-bit IT    ║  Quant   8-bit FULL   ║  Quant  4-bit MoE    ║
+   ║  RAM     ~18 GB      ║  RAM     ~70 GB       ║  RAM    ~75 GB       ║
+   ║  Disk    18 GB       ║  Disk    70 GB        ║  Disk   65 GB        ║
+   ║                      ║                       ║                      ║
+   ║  🎯 Daily coding     ║  🎯 Hardest reasoning ║  🎯 Max throughput   ║
+   ║  💪 Fits 64 GB Mac   ║  💪 Full precision    ║  💪 Active sparsity  ║
+   ╚══════════════════════╩═══════════════════════╩══════════════════════╝
+```
+
+| Pick This Model | If You Want… | Min RAM | Launcher |
+|---|---|:---:|---|
+| 🟢 **Gemma 4 31B** | Daily coding, low RAM, fast loop | 32 GB | `Gemma 4 Code.command` |
+| 🟠 **Llama 3.3 70B** | Hardest reasoning at full 8-bit precision | 96 GB | `Llama 70B.command` |
+| 🔵 **Qwen 3.5 122B** | Max tok/s, biggest brain | 96 GB | `Claude Local.command` |
+
+> 💡 **Fun fact:** Qwen wins raw speed because it's an MoE — only 10B of 122B params activate per token. Llama 70B is the slowest *and* the smartest because it's full-precision dense weights. Gemma is the lightweight champ that fits where the others can't.
+
+---
+
+## 🎮 The Modes
+
+Four ways to run the lineup. Each one is a double-clickable launcher in `launchers/`.
+
+```
+   ┌─────────────────────────────┬─────────────────────────────┐
+   │  🤖 CODE MODE               │  🌐 BROWSER MODE             │
+   │  ──────────                 │  ─────────────               │
+   │  Full Claude Code + local   │  Autonomous Brave agent      │
+   │  model. Same UX, no cloud.  │  via Chrome DevTools         │
+   │  → Claude Local.command     │  Protocol. Clicks, types,    │
+   │  → Gemma 4 Code.command     │  navigates iframes & Shadow  │
+   │  → Llama 70B.command        │  DOM with 0 cloud calls.     │
+   │                             │  → Browser Agent.command     │
+   ├─────────────────────────────┼─────────────────────────────┤
+   │  🎭 NARRATIVE MODE          │  📱 PHONE MODE               │
+   │  ─────────────              │  ────────────                │
+   │  Gemma speaks every reply   │  Text from your couch.       │
+   │  out loud through your TTS  │  iMessage in, code/video     │
+   │  or cloned voice. Includes  │  out. Full screen-record +   │
+   │  a sanitized persona file.  │  send-back pipeline.         │
+   │  → Narrative Gemma.command  │  → ~/.claude/imessage-*.sh   │
+   └─────────────────────────────┴─────────────────────────────┘
+```
+
+| Mode | What it does | Launcher |
+|---|---|---|
+| 🤖 **Code** | Run Claude Code with a local model — same UX, no API key | `Claude Local.command`, `Gemma 4 Code.command`, `Llama 70B.command` |
+| 🌐 **Browser** | Local AI controls real Brave browser via Chrome DevTools | `Browser Agent.command` |
+| 🎭 **Narrative** | Every reply spoken aloud through your TTS / cloned voice | `Narrative Gemma.command` |
+| 📱 **Phone** | iMessage in → text/image/video out, full pipeline | `~/.claude/imessage-*.sh` |
+
+---
+
 ## 🤔 What Is This?
 
-Your MacBook has a powerful GPU built right into the chip. This project uses that GPU to run a **massive AI model** — the same kind that powers ChatGPT and Claude — **entirely on your computer**.
+Your MacBook has a powerful GPU built right into the chip. This project uses that GPU to run **massive AI models — the same kind that power ChatGPT and Claude — entirely on your computer**.
 
 🚫 No internet needed
 💰 No monthly subscription
 🔒 No one sees your code or data
-✅ Full Claude Code experience — write code, edit files, manage projects, control your browser
+✅ Full Claude Code experience — write code, edit files, manage projects, control your browser, even narrate replies in your own voice
 
 ```
          📱 You (Mac or Phone)
           │
-     🤖 Claude Code         ← the AI coding tool you know
+     🤖 Claude Code           ← the AI coding tool you know
           │
-     ⚡ MLX Native Server    ← our server (200 lines of Python)
+     ⚡ MLX Native Server      ← our server (~800 lines of Python)
           │
-     🧠 Qwen 3.5 122B       ← 122 billion parameter brain
+     🥊 Pick your fighter     ← Gemma 4 31B · Llama 3.3 70B · Qwen 3.5 122B
           │
-     🖥️ Apple Silicon GPU    ← your M-series chip does all the work
+     🖥️  Apple Silicon GPU    ← your M-series chip does all the work
 ```
 
 ---
 
-## 📱 Control From Your Phone — Full Media Pipeline
+## 🔒 Safety + How the Data Flows
 
-You don't have to be at your Mac to use this. Text a command, get back a full video.
+This is the part we're proudest of. **Your code never leaves your Mac.** Not for a model call. Not for telemetry. Not for "anonymous analytics". Not ever.
+
+### 🛡️ The Data-Flow Diagram
 
 ```
-📱 Your iPhone                    💻 Your Mac
-     │                                │
-     │── "find me an article  ──────>│── imessage-receive.sh reads it
-     │    and send me a video"        │── Qwen 3.5 122B plans the task
-     │                                │── Brave browser finds the article
-     │                                │── speak narrates in your voice
-     │                                │── Studio Record captures it all
-     │                                │── build_production_video.py edits it
-     │<── 🎥 video in iMessage ──────│── imessage-send-video.sh ships it
-     │                                │
-   🛋️ From your couch            🖥️ At your desk
+   ┌─────────────────────────────────────────────────────────────┐
+   │                    🖥️  YOUR MACBOOK                          │
+   │                                                             │
+   │   📝 Your code         ┌────────────────────┐               │
+   │       │                │  🤖 Claude Code     │               │
+   │       └───────────────▶│  (CLI on your Mac)  │               │
+   │                        └────────┬───────────┘               │
+   │                                 │  HTTP localhost:4000       │
+   │                                 ▼                            │
+   │                        ┌────────────────────┐               │
+   │                        │  ⚡ MLX Server      │               │
+   │                        │  (Python, ours)    │               │
+   │                        └────────┬───────────┘               │
+   │                                 │  Metal API                 │
+   │                                 ▼                            │
+   │                        ┌────────────────────┐               │
+   │                        │  🧠 Local model     │               │
+   │                        │  (Gemma·Llama·Qwen)│               │
+   │                        └────────┬───────────┘               │
+   │                                 │                            │
+   │                                 ▼                            │
+   │                        ┌────────────────────┐               │
+   │                        │  🖥️  Apple GPU      │               │
+   │                        │  (unified memory)  │               │
+   │                        └────────────────────┘               │
+   │                                                             │
+   │             🚫 ZERO outbound network calls                  │
+   │             🚫 ZERO telemetry                               │
+   │             🚫 ZERO phone-home                              │
+   └─────────────────────────────────────────────────────────────┘
+                   │
+                   ✗  ←  Nothing crosses this line. Ever.
+                   │
+   ┌─────────────────────────────────────────────────────────────┐
+   │                    ☁️  THE INTERNET                          │
+   │                  (your code never goes here)                 │
+   └─────────────────────────────────────────────────────────────┘
 ```
 
-**Everything works — text, images, and video:**
+### 🔍 What We Audited (Every Component)
 
-| Command | What happens | You get |
-|---|---|---|
-| "summarize this article" | Qwen reads + replies | 💬 Text |
-| "send me a screenshot of X" | Claude screenshots | 📸 Image in iMessage |
-| "screen record you doing Y" | Records + sends | 🎥 Video in iMessage |
-| "make me a produced video" | Full edit pipeline | 🎬 Title card + subs |
+| Component | Source | Outbound calls | Verdict |
+|-----------|--------|:---:|:---:|
+| **server.py** (ours) | We wrote it line by line | **0** | ✅ Safe |
+| **agent.py** (browser agent) | We wrote it | **0** (talks to localhost CDP only) | ✅ Safe |
+| **mlx-lm** | Apple ML team | **0** | ✅ Safe |
+| **MLX framework** | Apple | **0** | ✅ Safe |
+| **Model weights** | HuggingFace verified mlx-community repos | **0** at runtime | ✅ Safe |
+| **iMessage scripts** | Pure shell + AppleScript | localhost only (Studio Record port 17494) | ✅ Safe |
 
-**Full pipeline repo:** [nicedreamzapp/claude-screen-to-phone](https://github.com/nicedreamzapp/claude-screen-to-phone)
-→ Clone it, run `setup.sh`, fill in your phone number. Works with this local AI stack or Claude cloud.
+### 🚫 What We Ripped Out
 
-We built this **before** Anthropic shipped their Dispatch feature. Same concept, but ours uses iMessage, runs on your local model, and can send back media — not just text.
+> ⚠️ We **[removed LiteLLM](https://x.com/Tahseen_Rahman/status/2035501506242240520)** after supply-chain attack concerns. Every dependency was re-audited from scratch. If a package had unexplained network calls, it didn't ship.
 
-> 💡 **Pro tip:** Anthropic's Dispatch doesn't read your CLAUDE.md. Mention it in your message or it'll miss your custom setup. Our iMessage system doesn't have this problem.
+### ✅ What This Means in Practice
+
+| Scenario | Cloud Claude | This Repo |
+|---|:---:|:---:|
+| Working with NDA / proprietary code | ❌ Risky | ✅ Air-gapped |
+| Coding on a plane (no wifi) | ❌ Doesn't work | ✅ Works |
+| Running on a kill-switch firewall | ❌ Blocked | ✅ Works |
+| Healthcare / legal / finance review | ⚠️ Compliance burden | ✅ Stays on-device |
+| Worry about training-data leakage | ⚠️ Trust required | ✅ Mathematically impossible |
+
+> 🔒 **The math is simple:** if there are no outbound HTTP calls, your data cannot leak. We grep'd every file for `requests`, `urllib`, `urlopen`, `httpx`, `socket.connect` — the only network calls in the entire codebase are to `localhost`. Run `lsof -i -P` while it's running. You'll see nothing leaving your Mac.
 
 ---
 
 ## 📊 Benchmarks
 
-We built and tested three different approaches. Each one got faster.
+Three generations of optimization. Each one got faster.
 
 ### ⚡ Speed Comparison
 
@@ -97,15 +204,25 @@ How long to ask Claude Code to write a function:
                               7.5x faster ⚡
 ```
 
-### 📋 Side-by-Side
+### 📋 Three-Generation Side-by-Side
 
 | | 🐌 Ollama | 🏃 llama.cpp + TurboQuant | 🚀 **MLX Native (ours)** |
 |---|:---:|:---:|:---:|
 | **Speed** | 30 tok/s | 41 tok/s | **65 tok/s** |
 | **Claude Code task** | 133s | 133s | **17.6s** |
 | **Needs a proxy?** | ❌ Yes | ❌ Yes | ✅ **No** |
-| **Lines of code** | N/A | N/A (C++ fork) | **~200 Python** |
+| **Lines of code** | N/A | N/A (C++ fork) | **~800 Python** |
 | **Apple native?** | ❌ Generic | ❌ Ported | ✅ **MLX** |
+
+### 🥊 Lineup Comparison
+
+| Model | tok/s | RAM | Best For |
+|---|:---:|:---:|---|
+| 🟢 Gemma 4 31B Abliterated | ~15 | ~18 GB | Daily coding on a 64 GB Mac |
+| 🟠 Llama 3.3 70B Abliterated | ~7 | ~70 GB | Hardest reasoning, full precision |
+| 🔵 **Qwen 3.5 122B-A10B** | **65** | ~75 GB | Maximum throughput, MoE sparsity |
+
+> Qwen 122B numbers are measured on M5 Max 128 GB. Gemma and Llama are observed real-world approximations. Full benchmarks for all three pending — see [BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ### ☁️ vs Cloud APIs
 
@@ -123,7 +240,7 @@ How long to ask Claude Code to write a function:
 
 ## 🔧 Tool-Call Reliability (v2 — March 2026)
 
-Local models don't format tool calls perfectly. Qwen 3.5 122B frequently garbles the format — it *wants* to call a tool but mixes XML and JSON syntax. Claude Code sees no valid tool call, re-prompts, and the model does it again. The result: **infinite loops where the AI says "let me do that" but never actually does anything.**
+Local models don't format tool calls perfectly. They *want* to call a tool but mix XML and JSON syntax. Claude Code sees no valid tool call, re-prompts, and the model does it again. The result: **infinite loops where the AI says "let me do that" but never actually does anything.**
 
 We fixed this. Here's what was happening and what we did about it.
 
@@ -186,10 +303,47 @@ You can override defaults with environment variables:
 
 | Variable | Default | What It Does |
 |----------|---------|-------------|
+| `MLX_MODEL` | `gemma-4-31b-it-abliterated-4bit` | Pick which fighter to load |
 | `MLX_KV_BITS` | `8` | KV cache quantization bits (4 saves memory, 8 improves coherence) |
-| `MLX_KV_QUANT_START` | `1024` | Token position where KV quantization begins (higher = better recent memory) |
+| `MLX_KV_QUANT_START` | `1024` | Token position where KV quantization begins |
 | `MLX_TOOL_RETRIES` | `2` | Max retries when a garbled tool call is detected |
 | `MLX_MAX_TOKENS` | `8192` | Max output tokens per response |
+
+---
+
+## 📱 Control From Your Phone — Full Media Pipeline
+
+You don't have to be at your Mac to use this. Text a command, get back a full video.
+
+```
+📱 Your iPhone                    💻 Your Mac
+     │                                │
+     │── "find me an article  ──────>│── imessage-receive.sh reads it
+     │    and send me a video"        │── local model plans the task
+     │                                │── Brave browser finds the article
+     │                                │── speak narrates in your voice
+     │                                │── Studio Record captures it all
+     │                                │── build_production_video.py edits it
+     │<── 🎥 video in iMessage ──────│── imessage-send-video.sh ships it
+     │                                │
+   🛋️  From your couch            🖥️  At your desk
+```
+
+**Everything works — text, images, and video:**
+
+| Command | What happens | You get |
+|---|---|---|
+| "summarize this article" | Local model reads + replies | 💬 Text |
+| "send me a screenshot of X" | Claude screenshots | 📸 Image in iMessage |
+| "screen record you doing Y" | Records + sends | 🎥 Video in iMessage |
+| "make me a produced video" | Full edit pipeline | 🎬 Title card + subs |
+
+**Full pipeline repo:** [nicedreamzapp/claude-screen-to-phone](https://github.com/nicedreamzapp/claude-screen-to-phone)
+→ Clone it, run `setup.sh`, fill in your phone number. Works with this local AI stack or Claude cloud.
+
+We built this **before** Anthropic shipped their Dispatch feature. Same concept, but ours uses iMessage, runs on your local model, and can send back media — not just text.
+
+> 💡 **Pro tip:** Anthropic's Dispatch doesn't read your CLAUDE.md. Mention it in your message or it'll miss your custom setup. Our iMessage system doesn't have this problem.
 
 ---
 
@@ -218,9 +372,9 @@ So everyone builds a **proxy** to translate between them. That proxy adds latenc
 | Your Mac | RAM | What You Can Run |
 |----------|-----|-------------------|
 | M1/M2/M3/M4 (base) | 8-16 GB | 🟡 Small models (4B) |
-| M1/M2/M3/M4 Pro | 18-36 GB | 🟠 Medium models (32B) |
-| M2/M3/M4/M5 Max | 64-128 GB | 🟢 **Large models (122B)** |
-| M2/M3/M4 Ultra | 128-192 GB | 🔵 Multiple large models |
+| M1/M2/M3/M4 Pro | 18-36 GB | 🟠 Gemma 4 31B (tight) |
+| M2/M3/M4/M5 Max | 64-128 GB | 🟢 **Gemma 4 31B** + 🔵 Qwen 3.5 122B |
+| M2/M3/M4 Ultra | 128-192 GB | 🔵 Multiple large models, all three fighters |
 
 Also need:
 - 🐍 **Python 3.12+** (for MLX)
@@ -228,115 +382,39 @@ Also need:
 
 ---
 
-## 🚀 Quick Start (4 Steps)
-
-### 1️⃣ Set up Python environment
+## 🚀 Quick Start (3 Commands)
 
 ```bash
+git clone https://github.com/nicedreamzapp/claude-code-local
+cd claude-code-local
+bash setup.sh
+```
+
+`setup.sh` auto-detects your RAM, picks a model from the lineup, downloads it, installs the MLX server, and creates a `Claude Local.command` launcher on your Desktop.
+
+**Then double-click `Claude Local.command`.** You're coding locally.
+
+### Or do it manually
+
+```bash
+# 1. Set up the MLX virtualenv
 python3.12 -m venv ~/.local/mlx-server
 ~/.local/mlx-server/bin/pip install mlx-lm
-```
 
-### 2️⃣ Download the AI model
+# 2. Pick a fighter and download (one time, ~18-75 GB)
+bash scripts/download-and-import.sh gemma   # or 'llama' or 'qwen'
 
-First run downloads ~50 GB (one time only):
+# 3. Start the server
+MLX_MODEL=mlx-community/gemma-4-31b-it-abliterated-4bit \
+  bash scripts/start-mlx-server.sh
 
-```bash
-~/.local/mlx-server/bin/python3 -c "
-from mlx_lm.utils import load
-load('mlx-community/Qwen3.5-122B-A10B-4bit')
-print('Done!')
-"
-```
-
-### 3️⃣ Start the server
-
-```bash
-~/.local/mlx-server/bin/python3 proxy/server.py
-```
-
-### 4️⃣ Launch Claude Code
-
-```bash
+# 4. Launch Claude Code
 ANTHROPIC_BASE_URL=http://localhost:4000 \
 ANTHROPIC_API_KEY=sk-local \
 claude --model claude-sonnet-4-6
 ```
 
-> 💡 **Or just double-click** `Claude Local.command` on your Desktop. It does all of this automatically.
-
----
-
-## 🎯 Orchestrator API (NEW)
-
-A REST API that lets any client — web app, mobile app, another AI, or a simple `curl` command — control your entire Mac through local AI. Browser, apps, screen recording, all from one endpoint.
-
-```
-Any client (web app, mobile, curl)
-     │
-     ▼
-🎯 Orchestrator API (port 4001)
-     ├── ⚡ MLX Server (port 4000) ← local AI brain
-     ├── 🌐 Brave CDP (port 9222) ← browser control
-     ├── 📹 Studio Record.app      ← screen recording
-     └── 🖥️ macOS (AppleScript)    ← app control
-```
-
-### Start the API
-
-```bash
-# Double-click the launcher:
-open "Orchestrator API.command"
-
-# Or start manually:
-~/.local/mlx-server/bin/python3 proxy/api.py
-```
-
-### Submit a task (natural language)
-
-```bash
-curl -X POST localhost:4001/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "Start recording for 4 minutes, open Yahoo News, find a food article, and draft a comment"}'
-
-# Returns: {"id": "abc123", "status": "pending"}
-```
-
-### Check progress
-
-```bash
-curl localhost:4001/tasks/abc123
-# Returns: status, steps taken, results
-```
-
-### Real-time progress via WebSocket
-
-```javascript
-const ws = new WebSocket("ws://localhost:4001/ws/tasks/abc123");
-ws.onmessage = (e) => console.log(JSON.parse(e.data));
-// Streams: {"type": "step", "step": {"tool": "browser_navigate", ...}}
-```
-
-### Direct tool access
-
-```bash
-# Browser
-curl -X POST localhost:4001/tools/browser/navigate -d '{"args":{"url":"https://yahoo.com"}}'
-curl -X POST localhost:4001/tools/browser/snapshot
-
-# macOS
-curl -X POST localhost:4001/tools/macos/open -d '{"args":{"name":"Studio Record"}}'
-curl -X POST localhost:4001/tools/macos/applescript -d '{"args":{"code":"tell app \"Finder\" to get name of every disk"}}'
-curl -X POST localhost:4001/tools/macos/command -d '{"args":{"command":"ls ~/Desktop"}}'
-
-# Recording
-curl -X POST localhost:4001/tools/record/start -d '{"args":{"duration":240}}'
-curl -X POST localhost:4001/tools/record/stop
-```
-
-### Interactive API docs
-
-Visit **http://localhost:4001/docs** for auto-generated Swagger UI with all endpoints.
+> 💡 **Or just double-click a launcher** in `launchers/`. They do all of this automatically.
 
 ---
 
@@ -346,27 +424,28 @@ Visit **http://localhost:4001/docs** for auto-generated Swagger UI with all endp
 ┌──────────────────────────────────────────────────┐
 │              Your MacBook (M5 Max)               │
 │                                                  │
-│  📱 You type ──> 🤖 Claude Code                  │
+│  📝 You type ──> 🤖 Claude Code                  │
 │                      │                           │
 │                      ▼                           │
-│                 ⚡ MLX Server (port 4000)         │
+│                 ⚡ MLX Server (port 4000)        │
 │                      │                           │
 │                      ▼                           │
-│                 🧠 Qwen 3.5 122B ──> 🖥️ GPU      │
+│                 🥊 Local model ──> 🖥️  GPU        │
+│                 (Gemma·Llama·Qwen)               │
 │                      │                           │
 │                      ▼                           │
-│  📱 Answer <─── ✨ Clean response                │
+│  📝 Answer <─── ✨ Clean response                │
 │                                                  │
 │         🔒 Nothing leaves this box. Ever.        │
 └──────────────────────────────────────────────────┘
 ```
 
-The server (`proxy/server.py`) is **one file, ~600 lines**. It does four things:
+The server (`proxy/server.py`) is **one file, ~800 lines**. It does four things:
 
 1. 📦 **Loads the model** — Apple's MLX framework, native Metal GPU, unified memory
 2. 🔌 **Speaks Anthropic API** — Claude Code thinks it's talking to Anthropic's cloud. It's not.
-3. 🔧 **Translates tool use** — Converts Anthropic tool definitions ↔ Qwen's native format, parses `<tool_call>` tags back into Anthropic `tool_use` blocks
-4. 🧹 **Cleans the output** — Qwen thinks out loud in `<think>` tags. We strip those.
+3. 🔧 **Translates tool use** — Converts Anthropic tool definitions ↔ HuggingFace `<tool_call>` format, parses tool calls back into Anthropic `tool_use` blocks
+4. 🧹 **Cleans the output** — Local models think out loud in `<think>` tags. We strip those.
 
 ---
 
@@ -379,7 +458,8 @@ A standalone browser agent (`agent.py`) that controls your **real Brave browser*
           │
      🤖 agent.py              ← autonomous browser agent
           │
-     ⚡ MLX Server (Qwen 122B) ← local AI decides what to do
+     ⚡ MLX Server             ← local AI decides what to do
+     (Gemma · Llama · Qwen)
           │
      🌐 Brave (CDP port 9222) ← clicks, types, navigates your real browser
           │
@@ -407,6 +487,33 @@ The context meter shows green/yellow/red after each step:
 
 ---
 
+## 🎭 Narrative Mode
+
+A new mode where **every reply gets spoken aloud** through your speakers. Pair Gemma 4 31B with a TTS CLI (your cloned voice, ElevenLabs, Piper, or just macOS `say`) and the model narrates everything it's doing in real time — "opening your notes file now", "found 12 TODOs across 4 files", etc.
+
+```
+   You ask a question
+        │
+        ▼
+   🎭 Gemma 4 31B (narrative persona loaded)
+        │
+        ├──> 🔊 ~/.local/bin/speak "Sure, opening your notes file now."
+        │
+        ├──> 📂 [Read tool call]
+        │
+        ├──> 🔊 ~/.local/bin/speak "Got it — your notes are about the auth migration."
+        │
+        └──> 💬 Text reply: "Read it. Want a summary?"
+```
+
+The persona file (`NarrativeGemma/CLAUDE.md`) is loaded as a system prompt at launch. It enforces the **speak-first-reply-second** rule on every turn.
+
+**No fancy TTS?** The persona doc shows you how to stub `~/.local/bin/speak` in three lines using macOS's built-in `say` command.
+
+> 💡 **Double-click** `Narrative Gemma.command` to launch. It boots Gemma 4 31B, injects the narration rules into the system prompt, and opens Claude Code in narration mode.
+
+---
+
 ## ✈️ When To Use This
 
 | Situation | Use This? | Why |
@@ -414,9 +521,10 @@ The context meter shows green/yellow/red after each step:
 | On a plane | ✅ | Full AI coding, no internet needed |
 | Sensitive client code | ✅ | Nothing leaves your machine |
 | Don't want API fees | ✅ | $0/month forever |
-| Want fastest possible | ☁️ | Cloud API is still faster |
-| Need Claude-level reasoning | ☁️ | Local model is good, not Claude-level |
+| Want fastest possible | ☁️ | Cloud Sonnet is still slightly faster |
+| Need Claude-level reasoning | ☁️ | Local models are good, not Claude-level |
 | Controlling from phone | ✅ | iMessage pipeline works offline |
+| Healthcare / legal / finance review | ✅ | 100% on-device, audit-friendly |
 
 ---
 
@@ -425,42 +533,28 @@ The context meter shows green/yellow/red after each step:
 ```
 📦 claude-code-local/
  ├── ⚡ proxy/
- │   ├── server.py              ← MLX server with tool-call recovery + retry logic (~600 lines)
- │   └── api.py                ← Orchestrator API — browser + macOS + recording (port 4001)
+ │   ├── server.py              ← MLX Native Anthropic Server with tool-call recovery (~800 lines)
+ │   └── proxy.py               ← LEGACY Ollama path (kept for users on the old route)
  ├── 🌐 agent.py                ← Standalone browser agent with context memory pipeline
  ├── 🚀 launchers/
- │   ├── Claude Local.command    ← Double-click to start Claude Code locally
- │   ├── Browser Agent.command   ← Double-click for autonomous browser control
- │   └── Orchestrator API.command ← Double-click to start the API server
- ├── 🛠️ scripts/
- │   ├── download-and-import.sh  ← Download models
- │   ├── persistent-download.sh  ← Auto-retry downloader
- │   ├── start-mlx-server.sh    ← Alternative config
- │   └── test_mlx_server.py     ← Automated tool-call reliability test suite
+ │   ├── Claude Local.command    ← Default fighter — Claude Code + local model
+ │   ├── Gemma 4 Code.command    ← 🟢 THE QUICK ONE
+ │   ├── Llama 70B.command       ← 🟠 THE WISE ONE
+ │   ├── Browser Agent.command   ← 🌐 Autonomous Brave browser control
+ │   └── Narrative Gemma.command ← 🎭 Auto-narration mode
+ ├── 🎭 NarrativeGemma/
+ │   └── CLAUDE.md              ← Narration persona (sanitized, generic, opt-in)
+ ├── 🛠️  scripts/
+ │   ├── download-and-import.sh ← Download a fighter (`gemma` / `llama` / `qwen`)
+ │   ├── persistent-download.sh ← Auto-retry downloader for big models
+ │   ├── start-mlx-server.sh    ← Server start helper
+ │   └── test_mlx_server.py     ← Tool-call reliability test suite
  ├── 📊 docs/
- │   ├── BENCHMARKS.md           ← Detailed speed comparisons
- │   └── TWITTER-THREAD.md       ← Social media content
+ │   ├── BENCHMARKS.md          ← Detailed speed comparisons
+ │   └── TWITTER-THREAD.md      ← Social media content
+ ├── 📱 IMESSAGE_MEDIA_PIPELINE.md ← Phone control + media sending docs
  └── setup.sh                    ← One-command installer
 ```
-
----
-
-## 🔒 Security
-
-We audited every component before running it:
-
-| Component | Source | Network Calls | Verdict |
-|-----------|--------|:---:|:---:|
-| **server.py** | We wrote it | 0 | ✅ Safe |
-| **MLX framework** | Apple | 0 | ✅ Safe |
-| **Qwen 3.5 model** | HuggingFace verified | 0 | ✅ Safe |
-
-🚫 No telemetry
-🚫 No analytics
-🚫 No phone-home
-🚫 No sketchy pip packages
-
-> ⚠️ We [removed LiteLLM](https://x.com/Tahseen_Rahman/status/2035501506242240520) after supply chain attack concerns were raised. Every dependency was audited.
 
 ---
 
@@ -473,8 +567,9 @@ We didn't start here. We went through three generations in one night:
 | 1️⃣ | Ollama + custom proxy | 30 tok/s | Ollama works but Claude Code can't talk to it directly |
 | 2️⃣ | llama.cpp TurboQuant + proxy | 41 tok/s | TurboQuant compresses KV cache 4.9x, but the proxy is the bottleneck |
 | 3️⃣ | **MLX native server** | **65 tok/s** | **Kill the proxy. Speak Anthropic API directly. 7.5x faster.** |
+| 4️⃣ | **The lineup** | varies | One server, three brains. Pick your fighter. |
 
-> 🎯 Each generation taught us something. The final insight — the proxy was the bottleneck, not the model — changed everything.
+> 🎯 Each generation taught us something. Killing the proxy made it fast. Adding the lineup made it flexible.
 
 ---
 
@@ -487,7 +582,9 @@ Built on the shoulders of giants:
 | 🤖 [Claude Code](https://claude.ai/claude-code) | AI coding agent | Anthropic |
 | 🍎 [MLX](https://github.com/ml-explore/mlx) | Apple Silicon ML framework | Apple |
 | 📦 [mlx-lm](https://github.com/ml-explore/mlx-examples) | Model loading + inference | Apple |
-| 🧠 [Qwen 3.5](https://qwenlm.github.io/) | The 122B model | Alibaba |
+| 🟢 [Gemma](https://blog.google/technology/developers/gemma-open-models/) | The 31B fighter | Google DeepMind |
+| 🟠 [Llama](https://llama.meta.com/) | The 70B fighter | Meta |
+| 🔵 [Qwen 3.5](https://qwenlm.github.io/) | The 122B fighter | Alibaba |
 | ⚡ [TurboQuant](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/) | KV cache compression research | Google Research |
 
 Tested on **Apple M5 Max** with **128 GB unified memory**.

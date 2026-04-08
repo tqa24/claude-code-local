@@ -1,15 +1,18 @@
 #!/bin/bash
 # Brave Browser Agent — Direct MLX + Chrome DevTools Protocol (no Claude Code)
 # Double-click to launch
+#
+# Override the model with: MLX_MODEL=mlx-community/<model-id>
 
-MLX_PYTHON="/Users/dtribe/.local/mlx-server/bin/python3"
-MLX_SERVER="/Users/dtribe/.local/mlx-native-server/server.py"
-AGENT="/Users/dtribe/.local/browser-agent/agent.py"
+MLX_PYTHON="$HOME/.local/mlx-server/bin/python3"
+MLX_SERVER="$HOME/.local/mlx-native-server/server.py"
+AGENT="$HOME/.local/browser-agent/agent.py"
+MODEL_NAME="${MLX_MODEL_LABEL:-Gemma 4 31B}"
 
-# Start 122B MLX server if not running
+# Start MLX server if not running
 if ! lsof -i :4000 >/dev/null 2>&1; then
-  echo "  Loading Qwen 3.5 122B..."
-  "$MLX_PYTHON" "$MLX_SERVER" >/tmp/mlx-server.log 2>&1 &
+  echo "  Loading $MODEL_NAME..."
+  MLX_BROWSER_MODE=1 "$MLX_PYTHON" "$MLX_SERVER" >/tmp/mlx-server.log 2>&1 &
   while ! curl -s http://localhost:4000/health 2>/dev/null | grep -q "ok"; do sleep 2; done
 fi
 
@@ -57,9 +60,9 @@ fi
 clear
 echo ""
 echo "  ╔═══════════════════════════════════════════════╗"
-echo "  ║  Brave Browser Agent                            ║"
-echo "  ║  Qwen 3.5 122B · MLX · Brave DevTools         ║"
-echo "  ║  iframes + Shadow DOM · no cloud               ║"
+echo "  ║  Brave Browser Agent                          ║"
+echo "  ║  $MODEL_NAME · MLX · Brave DevTools           ║"
+echo "  ║  iframes + Shadow DOM · 100% local            ║"
 echo "  ╚═══════════════════════════════════════════════╝"
 echo ""
 

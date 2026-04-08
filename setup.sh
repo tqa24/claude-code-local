@@ -1,87 +1,96 @@
 #!/bin/bash
 # Claude Code Local — One-command setup
-# Works on any Apple Silicon Mac
+# Apple Silicon only. Installs MLX, downloads a model from the lineup,
+# and creates a desktop launcher that runs Claude Code 100% on-device.
+#
 # Usage: bash setup.sh
 
 set -e
 
 echo ""
 echo "╔══════════════════════════════════════════════════╗"
-echo "║     Claude Code Local — Setup                   ║"
-echo "║     Run AI coding agents on your Mac            ║"
+echo "║     Claude Code Local — Setup                    ║"
+echo "║     Pick your fighter. Run AI on your Mac.       ║"
 echo "╚══════════════════════════════════════════════════╝"
 echo ""
 
-# Detect memory
+# ── System detection ──────────────────────────────────────────
 MEM_GB=$(sysctl -n hw.memsize 2>/dev/null | awk '{print int($1/1073741824)}')
-echo "Detected: $(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo 'Apple Silicon')"
-echo "Memory: ${MEM_GB} GB"
+CHIP=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo 'Apple Silicon')
+
+echo "Detected: $CHIP"
+echo "Memory:   ${MEM_GB} GB"
 echo ""
 
-# Check for Apple Silicon
 if [[ $(uname -m) != "arm64" ]]; then
   echo "ERROR: This requires Apple Silicon (M1 or later)."
   exit 1
 fi
 
-# Install Homebrew if missing
+# ── Homebrew ──────────────────────────────────────────────────
 if ! command -v brew &>/dev/null; then
   echo "Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-# Install Ollama
-if ! command -v ollama &>/dev/null; then
-  echo "Installing Ollama..."
-  brew install ollama
+# ── Python 3.12 + MLX ─────────────────────────────────────────
+if ! command -v python3.12 &>/dev/null; then
+  echo "Installing Python 3.12 (required for MLX)..."
+  brew install python@3.12
 fi
 
-# Start Ollama
-if ! pgrep -x "ollama" >/dev/null 2>&1; then
-  echo "Starting Ollama..."
-  ollama serve >/dev/null 2>&1 &
-  sleep 3
+MLX_VENV="$HOME/.local/mlx-server"
+if [ ! -d "$MLX_VENV" ]; then
+  echo "Creating MLX virtualenv at $MLX_VENV..."
+  python3.12 -m venv "$MLX_VENV"
 fi
 
-# Choose model based on RAM
-echo "Selecting model for your ${MEM_GB} GB Mac..."
+echo "Installing mlx-lm into virtualenv..."
+"$MLX_VENV/bin/pip" install --quiet --upgrade pip
+"$MLX_VENV/bin/pip" install --quiet --upgrade mlx-lm
+
+# ── Pick a model from the lineup ──────────────────────────────
+echo ""
+echo "Selecting a model from the lineup for your ${MEM_GB} GB Mac..."
 if [ "$MEM_GB" -ge 96 ]; then
-  MODEL="qwen3.5:122b"
-  MODEL_DESC="122B (81 GB) — full power"
+  MODEL_ID="mlx-community/Qwen3.5-122B-A10B-4bit"
+  MODEL_LABEL="Qwen 3.5 122B (THE BEAST — 65 tok/s)"
+  MODEL_TIER="🔵 max"
+elif [ "$MEM_GB" -ge 64 ]; then
+  MODEL_ID="mlx-community/gemma-4-31b-it-abliterated-4bit"
+  MODEL_LABEL="Gemma 4 31B Abliterated (THE QUICK ONE — ~15 tok/s)"
+  MODEL_TIER="🟢 fast"
 elif [ "$MEM_GB" -ge 32 ]; then
-  MODEL="qwen3.5:32b"
-  MODEL_DESC="32B (20 GB) — great coding"
+  MODEL_ID="mlx-community/gemma-4-31b-it-abliterated-4bit"
+  MODEL_LABEL="Gemma 4 31B Abliterated (tight fit, may swap)"
+  MODEL_TIER="🟡 squeeze"
 else
-  MODEL="qwen3.5:4b"
-  MODEL_DESC="4B (3.4 GB) — lightweight"
+  MODEL_ID="mlx-community/Qwen3.5-4B-4bit"
+  MODEL_LABEL="Qwen 3.5 4B (lightweight, browser-agent friendly)"
+  MODEL_TIER="🟠 small"
 fi
 
-echo "Selected: $MODEL — $MODEL_DESC"
+echo "Selected: $MODEL_TIER  $MODEL_LABEL"
+echo "Model ID: $MODEL_ID"
 echo ""
 
-# Pull models
-echo "Downloading $MODEL (this may take a while)..."
-ollama pull "$MODEL"
+# ── Download model ────────────────────────────────────────────
+echo "Downloading $MODEL_ID (one time, can be 18-75 GB)..."
+"$MLX_VENV/bin/python3" - <<PY
+from mlx_lm.utils import load
+load("$MODEL_ID")
+print("Done.")
+PY
 
-# Always pull the small model for browser agent
-if [ "$MODEL" != "qwen3.5:4b" ]; then
-  echo "Downloading qwen3.5:4b for browser agent..."
-  ollama pull qwen3.5:4b
-fi
-
-# Set up proxy
-PROXY_DIR="$HOME/.local/claude-local-proxy"
-mkdir -p "$PROXY_DIR"
+# ── Install MLX server ────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cp "$SCRIPT_DIR/proxy/proxy.py" "$PROXY_DIR/proxy.py"
+SERVER_DIR="$HOME/.local/mlx-native-server"
+mkdir -p "$SERVER_DIR"
+cp "$SCRIPT_DIR/proxy/server.py" "$SERVER_DIR/server.py"
+echo "MLX server installed → $SERVER_DIR/server.py"
 
-# Update MODEL_MAP if not using 122b
-if [ "$MODEL" != "qwen3.5:122b" ]; then
-  sed -i '' "s/qwen3.5:122b/$MODEL/g" "$PROXY_DIR/proxy.py"
-fi
-
-# Create desktop launcher
+# ── Create desktop launcher ───────────────────────────────────
 CLAUDE_BIN=$(which claude 2>/dev/null || echo "$HOME/.local/bin/claude")
 if [ ! -f "$CLAUDE_BIN" ]; then
   echo ""
@@ -91,37 +100,39 @@ if [ ! -f "$CLAUDE_BIN" ]; then
   CLAUDE_BIN="\$HOME/.local/bin/claude"
 fi
 
-cat > "$HOME/Desktop/Claude Local.command" << LAUNCHER
+LAUNCHER="$HOME/Desktop/Claude Local.command"
+cat > "$LAUNCHER" <<LAUNCH
 #!/bin/bash
-# Claude Code — Local AI
+# Claude Code — Local AI ($MODEL_LABEL)
 CLAUDE_BIN="$CLAUDE_BIN"
-PROXY="$PROXY_DIR/proxy.py"
-
-if ! pgrep -x "ollama" >/dev/null 2>&1; then
-  ollama serve >/dev/null 2>&1 &
-  sleep 3
-fi
+MLX_PYTHON="$MLX_VENV/bin/python3"
+MLX_SERVER="$SERVER_DIR/server.py"
 
 if ! lsof -i :4000 >/dev/null 2>&1; then
-  python3 "\$PROXY" >/dev/null 2>&1 &
-  sleep 2
+  MLX_MODEL="$MODEL_ID" "\$MLX_PYTHON" "\$MLX_SERVER" >/tmp/mlx-server.log 2>&1 &
+  echo "  Loading $MODEL_LABEL on MLX..."
+  while ! curl -s http://localhost:4000/health 2>/dev/null | grep -q "ok"; do
+    sleep 2
+  done
 fi
 
 clear
 echo ""
-echo "  → Claude Code with LOCAL AI ($MODEL)"
-echo "  → Running on your Mac — no cloud, no API fees"
+echo "  → Claude Code with LOCAL AI"
+echo "  → $MODEL_LABEL"
+echo "  → 100% on-device, no cloud, no API fees"
 echo ""
 
 ANTHROPIC_BASE_URL=http://localhost:4000 \\
 ANTHROPIC_API_KEY=sk-local \\
 exec "\$CLAUDE_BIN" --model claude-sonnet-4-6
-LAUNCHER
+LAUNCH
 
-chmod +x "$HOME/Desktop/Claude Local.command"
+chmod +x "$LAUNCHER"
 
-# ── Install iMessage / Screen-to-Phone tools ─────────────────
-echo "Setting up iMessage phone control tools..."
+# ── Optional: iMessage / Screen-to-Phone tools ────────────────
+echo ""
+echo "Checking for optional iMessage phone-control tools..."
 CLAUDE_DIR="$HOME/.claude"
 mkdir -p "$CLAUDE_DIR"
 
@@ -145,15 +156,13 @@ done
 
 if [ "$MISSING" -eq 0 ]; then
   echo "  ✅ Phone tools installed to ~/.claude/"
-  echo ""
-  echo "  → Configure your phone number:"
-  if [ ! -f "$SCRIPT_DIR/config.sh" ]; then
-    cp "$SCRIPT_DIR/config.example.sh" "$SCRIPT_DIR/config.sh" 2>/dev/null || true
+  if [ -f "$SCRIPT_DIR/config.example.sh" ] && [ ! -f "$SCRIPT_DIR/config.sh" ]; then
+    cp "$SCRIPT_DIR/config.example.sh" "$SCRIPT_DIR/config.sh"
     echo "  → Edit config.sh with your iPhone number + Apple ID"
   fi
   cp "$SCRIPT_DIR/config.sh" "$CLAUDE_DIR/screen-to-phone-config.sh" 2>/dev/null || true
 else
-  echo "  ⚠️  Phone scripts not found — clone claude-screen-to-phone alongside this repo"
+  echo "  ℹ️  Phone scripts not bundled — clone them separately if you want phone control:"
   echo "     https://github.com/nicedreamzapp/claude-screen-to-phone"
 fi
 
@@ -162,15 +171,16 @@ echo "╔═══════════════════════�
 echo "║     Setup complete!                              ║"
 echo "╠══════════════════════════════════════════════════╣"
 echo "║                                                  ║"
-echo "║  Model: $MODEL"
-echo "║  Proxy: $PROXY_DIR/proxy.py"
+echo "║  Model:    $MODEL_ID"
+echo "║  Server:   $SERVER_DIR/server.py"
 echo "║  Launcher: ~/Desktop/Claude Local.command"
 echo "║                                                  ║"
 echo "║  Double-click 'Claude Local' on your Desktop     ║"
 echo "║  to start coding with local AI.                  ║"
 echo "║                                                  ║"
-echo "║  📱 Phone control: ~/.claude/imessage-send.sh    ║"
-echo "║     Fill in config.sh with your phone number    ║"
+echo "║  Want a different fighter? See launchers/ for    ║"
+echo "║  Gemma 4 Code, Llama 70B, Browser Agent,         ║"
+echo "║  and Narrative Gemma launchers.                  ║"
 echo "║                                                  ║"
 echo "╚══════════════════════════════════════════════════╝"
 echo ""

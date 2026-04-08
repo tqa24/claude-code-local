@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """
 MLX Native Anthropic Server — Claude Code on Apple Silicon.
+
 Single-file server: MLX inference + Anthropic Messages API + KV cache quantization.
-Supports tool use: converts Anthropic tool format <-> Qwen's native function calling.
+Supports tool use: converts Anthropic tool format <-> the model's native function
+calling format (Qwen, Gemma, Llama all use the HuggingFace `<tool_call>` JSON convention).
+
+Pick a model from the lineup with the MLX_MODEL env var:
+    MLX_MODEL=mlx-community/Qwen3.5-122B-A10B-4bit              (THE BEAST)
+    MLX_MODEL=mlx-community/gemma-4-31b-it-abliterated-4bit     (THE QUICK ONE — default)
+    MLX_MODEL=mlx-community/Llama-3.3-70B-Instruct-abliterated-8bit  (THE WISE ONE)
 """
 
 import json
@@ -23,7 +30,7 @@ from mlx_lm.sample_utils import make_sampler
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
-MODEL_PATH = os.environ.get("MLX_MODEL", "mlx-community/Qwen3.5-122B-A10B-4bit")
+MODEL_PATH = os.environ.get("MLX_MODEL", "mlx-community/gemma-4-31b-it-abliterated-4bit")
 PORT = int(os.environ.get("MLX_PORT", "4000"))
 KV_BITS = int(os.environ.get("MLX_KV_BITS", "8"))
 PREFILL_SIZE = int(os.environ.get("MLX_PREFILL_SIZE", "4096"))
@@ -762,7 +769,7 @@ if __name__ == "__main__":
     print("╔══════════════════════════════════════════════════╗")
     print("║  MLX Native Anthropic Server                    ║")
     print("║  Claude Code → MLX → Apple Silicon (direct)     ║")
-    print("║  Tool use: enabled (Anthropic ↔ Qwen)           ║")
+    print("║  Tool use: enabled (Anthropic ↔ HF tool format) ║")
     print("╚══════════════════════════════════════════════════╝")
     print()
 

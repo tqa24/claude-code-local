@@ -343,7 +343,7 @@ def ask_model(messages):
     return "".join(b.get("text","") for b in result.get("content",[]) if b.get("type")=="text")
 
 def generate_comment(article_text):
-    """Generate a clean comment from article text. Handles Qwen's verbose reasoning."""
+    """Generate a clean comment from article text. Handles models that emit verbose reasoning."""
     body = json.dumps({
         "model": MODEL, "max_tokens": 1024, "temperature": 0.7,
         "system": "Comment on the news article. 2-3 sentences.",
@@ -356,7 +356,7 @@ def generate_comment(article_text):
     text = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL).strip()
     text = re.sub(r'\*+', '', text)  # Remove markdown
 
-    # Qwen ALWAYS dumps reasoning. Extract only real comment sentences.
+    # Local models often dump reasoning. Extract only real comment sentences.
     all_sentences = re.findall(r'([A-Z][^.!?]{20,}[.!?])', text)
 
     # Filter out meta-reasoning — NOT part of a real comment
