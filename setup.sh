@@ -84,11 +84,15 @@ print("Done.")
 PY
 
 # ── Install MLX server ────────────────────────────────────────
+# We install it as a symlink into this repo, not a copy. That way if you edit
+# proxy/server.py in the repo (to fix a bug, add a feature, pull a PR), the
+# change takes effect on the running server after the next restart — with no
+# risk of the running copy silently drifting from the version in git.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER_DIR="$HOME/.local/mlx-native-server"
 mkdir -p "$SERVER_DIR"
-cp "$SCRIPT_DIR/proxy/server.py" "$SERVER_DIR/server.py"
-echo "MLX server installed → $SERVER_DIR/server.py"
+ln -sf "$SCRIPT_DIR/proxy/server.py" "$SERVER_DIR/server.py"
+echo "MLX server installed (symlink) → $SERVER_DIR/server.py -> $SCRIPT_DIR/proxy/server.py"
 
 # ── Create desktop launcher ───────────────────────────────────
 CLAUDE_BIN=$(which claude 2>/dev/null || echo "$HOME/.local/bin/claude")

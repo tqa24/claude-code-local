@@ -417,6 +417,8 @@ bash setup.sh
 
 **Then double-click `Claude Local.command`.** You're coding locally.
 
+> 🛠️ **Note for contributors / hackers:** `setup.sh` installs the server as a **symlink** at `~/.local/mlx-native-server/server.py` pointing back at this repo's `proxy/server.py`. Edit the file in the repo, restart the MLX server, done — no re-running `setup.sh`, no copying, no silent drift between "what I committed" and "what's actually running." There is one source of truth for the server, and it's `proxy/server.py` in the repo.
+
 ### Or do it manually
 
 ```bash
@@ -463,7 +465,7 @@ claude --model claude-sonnet-4-6
 └──────────────────────────────────────────────────┘
 ```
 
-The server (`proxy/server.py`) is **one file, ~800 lines**. It does four things:
+The server (`proxy/server.py`) is **one file, ~1000 lines**. It does four things:
 
 1. 📦 **Loads the model** — Apple's MLX framework, native Metal GPU, unified memory
 2. 🔌 **Speaks Anthropic API** — Claude Code thinks it's talking to Anthropic's cloud. It's not.
@@ -556,8 +558,7 @@ The persona file (`NarrativeGemma/CLAUDE.md`) is loaded as a system prompt at la
 ```
 📦 claude-code-local/
  ├── ⚡ proxy/
- │   ├── server.py              ← MLX Native Anthropic Server with tool-call recovery (~800 lines)
- │   └── proxy.py               ← LEGACY Ollama path (kept for users on the old route)
+ │   └── server.py              ← MLX Native Anthropic Server with tool-call recovery (~1000 lines)
  ├── 🌐 agent.py                ← Standalone browser agent with context memory pipeline
  ├── 🚀 launchers/
  │   ├── Claude Local.command    ← Default fighter — Claude Code + local model

@@ -2,14 +2,20 @@
 """
 MLX Native Anthropic Server — Claude Code on Apple Silicon.
 
-Single-file server: MLX inference + Anthropic Messages API + KV cache quantization.
-Supports tool use: converts Anthropic tool format <-> the model's native function
-calling format (Qwen, Gemma, Llama all use the HuggingFace `<tool_call>` JSON convention).
+Single-file server: MLX inference + Anthropic Messages API + tool use support.
+Converts Anthropic tool format <-> the model's native function calling format
+(Gemma 4's `<|tool_call>call:Name{...}<tool_call|>`, Llama 3.3's raw-JSON
+`{"type":"function",...}`, and the common HuggingFace `<tool_call>` JSON form
+used by Qwen and others).
 
 Pick a model from the lineup with the MLX_MODEL env var:
-    MLX_MODEL=mlx-community/Qwen3.5-122B-A10B-4bit                       (THE BEAST)
     MLX_MODEL=divinetribe/gemma-4-31b-it-abliterated-4bit-mlx            (THE QUICK ONE — default, our own MLX upload)
     MLX_MODEL=divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx    (THE WISE ONE — our own MLX upload)
+    MLX_MODEL=mlx-community/Qwen3.5-122B-A10B-4bit                       (THE BEAST)
+
+NOTE FOR CONTRIBUTORS: this file is the source of truth. `setup.sh` installs it
+at `~/.local/mlx-native-server/server.py` via a symlink, so edits here take
+effect on the running server after a restart — no re-copying needed.
 """
 
 import json
@@ -27,24 +33,31 @@ import mlx.nn as nn
 from mlx_lm.utils import load
 from mlx_lm.generate import stream_generate
 from mlx_lm.sample_utils import make_sampler
+from mlx_lm.models.cache import make_prompt_cache
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 MODEL_PATH = os.environ.get("MLX_MODEL", "divinetribe/gemma-4-31b-it-abliterated-4bit-mlx")
 PORT = int(os.environ.get("MLX_PORT", "4000"))
-KV_BITS = int(os.environ.get("MLX_KV_BITS", "8"))
-PREFILL_SIZE = int(os.environ.get("MLX_PREFILL_SIZE", "4096"))
+KV_BITS = int(os.environ.get("MLX_KV_BITS", "0"))  # Gemma 4 RotatingKVCache doesn't support quantization
+PREFILL_SIZE = int(os.environ.get("MLX_PREFILL_SIZE", "8192"))
 DEFAULT_MAX_TOKENS = int(os.environ.get("MLX_MAX_TOKENS", "8192"))
-KV_QUANT_START = int(os.environ.get("MLX_KV_QUANT_START", "1024"))
+KV_QUANT_START = int(os.environ.get("MLX_KV_QUANT_START", "256"))
 MAX_TOOL_RETRIES = int(os.environ.get("MLX_TOOL_RETRIES", "2"))
 # Browser mode: strip Claude Code bloat, keep only MCP tools
 BROWSER_MODE = os.environ.get("MLX_BROWSER_MODE", "0") == "1"
+# Code mode: auto-detect Claude Code coding sessions and replace the huge harness
+# system prompt with a Llama-tuned one. Set MLX_CODE_MODE=0 to disable.
+CODE_MODE_ENABLED = os.environ.get("MLX_CODE_MODE", "1") != "0"
 
 # ─── Globals ─────────────────────────────────────────────────────────────────
 
 model = None
 tokenizer = None
 generate_lock = threading.Lock()
+# Prompt cache: reuse KV state across requests to avoid re-prefilling system+tools
+_prompt_cache = None
+_cached_token_prefix = None  # token IDs we've already prefilled
 
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
@@ -55,18 +68,40 @@ def log(msg):
 
 # ─── Model Loading ───────────────────────────────────────────────────────────
 
+GEMMA4_CHAT_TEMPLATE = (
+    "{{ bos_token }}"
+    "{% set ns = namespace(system='') %}"
+    "{% for message in messages %}{% if message['role'] == 'system' %}{% set ns.system = message['content'] %}{% endif %}{% endfor %}"
+    "{% for message in messages %}"
+    "{% if message['role'] == 'user' %}"
+    "<|turn>user\n{% if ns.system and loop.first %}{{ ns.system }}\n\n{% endif %}{{ message['content'] }}<turn|>"
+    "{% elif message['role'] == 'assistant' %}"
+    "<|turn>model\n{{ message['content'] }}<turn|>"
+    "{% elif message['role'] == 'tool' %}"
+    "<|turn>tool_response\n{{ message['content'] }}<turn|>"
+    "{% endif %}"
+    "{% endfor %}"
+    "{% if add_generation_prompt %}<|turn>model\n{% endif %}"
+)
+
 def load_model():
     global model, tokenizer, KV_BITS
     log(f"Loading model: {MODEL_PATH}")
     t0 = time.time()
     model, tokenizer = load(MODEL_PATH)
     mx.eval(model.parameters())
+    # Fallback chat template if model doesn't provide one (Llama 3.3 has its own)
+    if not getattr(tokenizer, 'chat_template', None):
+        tokenizer.chat_template = GEMMA4_CHAT_TEMPLATE
+        log("Injected Gemma 4 chat template")
     elapsed = time.time() - t0
     log(f"Model loaded in {elapsed:.1f}s")
 
-    # Gemma uses sliding-window attention → RotatingKVCache, which mlx-lm
-    # can't quantize yet ("RotatingKVCache Quantization NYI"). Auto-disable
-    # KV quantization for Gemma so inference doesn't 500 on the first call.
+    # Safety net: Gemma uses sliding-window attention → RotatingKVCache, which
+    # mlx-lm can't quantize yet ("RotatingKVCache Quantization NYI"). The
+    # default for MLX_KV_BITS is already 0, but if a user explicitly sets it to
+    # 8 and happens to be running Gemma, auto-disable it so inference doesn't
+    # 500 on the first call. (Credit: asdmoment, PR #7.)
     if KV_BITS and "gemma" in MODEL_PATH.lower():
         log("Gemma detected: disabling KV cache quantization (RotatingKVCache NYI)")
         KV_BITS = 0
@@ -77,18 +112,27 @@ def load_model():
 # ─── Think Tag Stripping ────────────────────────────────────────────────────
 
 def strip_think_tags(text):
-    """Remove <think>...</think> blocks and stray closing tags from Qwen's reasoning output."""
+    """Remove thinking blocks from model reasoning output."""
+    # Standard <think>...</think>
     cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
-    # Remove stray </think> without matching open tag
     cleaned = re.sub(r'</think>', '', cleaned).strip()
-    # Remove empty <tool_call></tool_call> blocks (Qwen sometimes emits these alongside <function> calls)
+    # Gemma 4 thinking: <|channel>thought\n...<channel|>
+    cleaned = re.sub(r'<\|channel>thought\n.*?<channel\|>', '', cleaned, flags=re.DOTALL).strip()
+    # Empty tool_call blocks
     cleaned = re.sub(r'<tool_call>\s*</tool_call>', '', cleaned).strip()
     return cleaned if cleaned else text
 
 
 def clean_response(text):
-    """Strip think tags and clean reasoning artifacts (but preserve tool_call tags)."""
+    """Strip think tags, stop tokens, and reasoning artifacts (but preserve tool_call tags)."""
     text = strip_think_tags(text)
+    # Llama 3.x: strip function-call prefix token
+    text = text.replace('<|python_tag|>', '').strip()
+    # Gemma 4: truncate at end-of-turn or start of a new turn
+    for stop_marker in ['<turn|>', '<|turn>']:
+        if stop_marker in text:
+            text = text[:text.index(stop_marker)].strip()
+            break
 
     # Remove reasoning preamble if present
     if text.lstrip().startswith("Thinking"):
@@ -103,22 +147,21 @@ def clean_response(text):
 
 # ─── Tool Conversion ────────────────────────────────────────────────────────
 
-def convert_tools_for_qwen(anthropic_tools):
-    """Convert Anthropic tool definitions to HuggingFace/Qwen format."""
+def convert_tools_for_llm(anthropic_tools):
+    """Convert Anthropic tool definitions to HuggingFace/Llama format."""
     if not anthropic_tools:
         return None
-    qwen_tools = []
+    llm_tools = []
     for tool in anthropic_tools:
-        qwen_tool = {
+        llm_tools.append({
             "type": "function",
             "function": {
                 "name": tool.get("name", ""),
                 "description": tool.get("description", ""),
                 "parameters": tool.get("input_schema", {"type": "object", "properties": {}}),
             }
-        }
-        qwen_tools.append(qwen_tool)
-    return qwen_tools
+        })
+    return llm_tools
 
 
 def format_tools_as_text(tools):
@@ -160,7 +203,7 @@ def format_tools_as_text(tools):
 def recover_garbled_tool_json(content, original_text=""):
     """Attempt to recover tool name and arguments from garbled JSON inside <tool_call> tags.
 
-    Qwen frequently produces hybrid XML/JSON like:
+    Models sometimes produce hybrid XML/JSON like:
       {"name": "Bash", "parameter=command>cd ~/Desktop && rm -rf ...
       {"name": "Bash", "<parameter_commands>["rm -rf ...
       {"name": "Edit", "parameter=file_path>/some/path</parameter...
@@ -229,10 +272,65 @@ def recover_garbled_tool_json(content, original_text=""):
 
 def parse_tool_calls(text):
     """Parse tool calls from generated text. Handles multiple formats including
-    garbled output from smaller models. Returns (list of tool calls, remaining text).
+    Gemma 4 native format. Returns (list of tool calls, remaining text).
     """
     tool_calls = []
+
+    # Format 0: Gemma 4 native — <|tool_call>call:Name{key:<|"|>val<|"|>}<tool_call|>
+    # Parse BEFORE replacing escape tokens — use <|"|> as reliable value delimiters
+    gemma4_pattern = r'<\|tool_call>(.*?)<tool_call\|>'
+    gemma4_matches = list(re.finditer(gemma4_pattern, text, re.DOTALL))
+    if gemma4_matches:
+        remaining = text
+        for match in gemma4_matches:
+            remaining = remaining.replace(match.group(0), "", 1)
+            content = match.group(1).strip()
+            name_m = re.match(r'call:([\w.]+)\{(.*)\}', content, re.DOTALL)
+            if not name_m:
+                log(f"  Gemma4 no name match: {content[:80]}")
+                continue
+            name = name_m.group(1)
+            args_str = name_m.group(2)
+            arguments = {}
+            # Primary: extract key:<|"|>value<|"|> pairs (handles embedded quotes)
+            for km in re.finditer(r'(\w+):<\|"\|>(.*?)<\|"\|>', args_str, re.DOTALL):
+                arguments[km.group(1)] = km.group(2)
+            # Fallback: unquoted values (numbers, simple strings)
+            if not arguments:
+                for km in re.finditer(r'(\w+):([^,}]+)', args_str):
+                    val = km.group(2).strip().strip('"\'')
+                    arguments[km.group(1)] = val
+            if arguments:
+                tool_calls.append({"name": name, "arguments": arguments})
+                log(f"  Gemma4 tool call: {name}({list(arguments.keys())})")
+            else:
+                log(f"  Gemma4 no args parsed: {content[:80]}")
+        if tool_calls:
+            return tool_calls, remaining.strip()
+
     remaining = text
+
+    # Format 0.5: Llama 3.3 raw JSON — {"type":"function","name":"...","parameters":{...}}
+    # Use json.JSONDecoder.raw_decode for robust nested JSON parsing
+    _decoder = json.JSONDecoder()
+    _pos = 0
+    while _pos < len(text):
+        idx = text.find('{"type"', _pos)
+        if idx == -1:
+            break
+        try:
+            obj, end_pos = _decoder.raw_decode(text, idx)
+            if obj.get("type") == "function" and "name" in obj:
+                name = obj["name"]
+                arguments = obj.get("parameters", {})
+                tool_calls.append({"name": name, "arguments": arguments})
+                remaining = remaining.replace(text[idx:end_pos], "", 1)
+                log(f"  Llama tool call: {name}({list(arguments.keys())})")
+            _pos = end_pos
+        except json.JSONDecodeError:
+            _pos = idx + 1
+    if tool_calls:
+        return tool_calls, remaining.strip()
 
     # Format 1: <tool_call>{"name": "x", "arguments": {...}}</tool_call>
     pattern1 = r'<tool_call>\s*(.*?)\s*</tool_call>'
@@ -282,7 +380,7 @@ def parse_tool_calls(text):
             tool_calls.append({"name": func_name, "arguments": arguments})
             remaining = remaining.replace(match.group(0), "", 1)
 
-    # Format 3: <|tool_call|>...<|/tool_call|> (some Qwen versions)
+    # Format 3: <|tool_call|>...<|/tool_call|> (some model versions)
     if not tool_calls:
         pattern3 = r'<\|tool_call\|>\s*(.*?)\s*<\|/tool_call\|>'
         for match in re.finditer(pattern3, text, re.DOTALL):
@@ -352,12 +450,12 @@ def parse_tool_calls(text):
 # ─── Anthropic Message Conversion ───────────────────────────────────────────
 
 def convert_messages(body):
-    """Convert Anthropic Messages format to Qwen chat messages.
+    """Convert Anthropic Messages format to MLX chat messages.
 
     Handles:
     - Text messages (passthrough)
-    - Assistant messages with tool_use blocks → Qwen <tool_call> format
-    - User messages with tool_result blocks → role="tool" messages for Qwen
+    - Assistant messages with tool_use blocks → <tool_call> format
+    - User messages with tool_result blocks → role="tool" messages
     """
     messages = []
 
@@ -393,7 +491,7 @@ def convert_messages(body):
                 elif btype == "tool_result":
                     tool_result_parts.append(block)
 
-            # Assistant message with tool_use blocks → convert to Qwen format
+            # Assistant message with tool_use blocks → convert to LLM format
             if role == "assistant" and tool_use_parts:
                 content_str = ""
                 if text_parts:
@@ -528,6 +626,67 @@ def optimize_for_browser(body):
     return body
 
 
+# ─── Code Mode Optimization ──────────────────────────────────────────────────
+#
+# Claude Code's harness sends a ~10K-token system prompt and 30+ tools, all
+# tuned for Claude. Open models (Llama, Qwen, etc.) get confused inside that
+# wall of context and emit stock refusals like "I am not able to execute this
+# task as it exceeds the limitations of the functions I have been given."
+#
+# This mode auto-detects Claude Code coding sessions (any of Bash/Read/Edit/
+# Write/Grep/Glob in the tool list) and replaces the harness with a slim
+# Llama-friendly prompt + filtered tool list. Browser mode takes priority.
+
+CODE_SYSTEM_PROMPT = """You are a local coding assistant running on the user's Mac via MLX. You help with software engineering tasks: reading code, editing files, running shell commands, and searching codebases.
+
+You have these tools available:
+- Bash: run a shell command
+- Read: read a file from disk (use absolute paths)
+- Edit: replace exact text in an existing file
+- Write: create a new file
+- Grep: search file contents (ripgrep)
+- Glob: find files by name pattern
+
+RULES:
+- Be concise. Skip preamble. Do the work, then give a brief result.
+- Greetings, small talk, or questions about yourself: respond in plain text with NO tool calls.
+- For real tasks: read files before editing them, use absolute paths, batch independent tool calls in parallel.
+- NEVER say "I am not able to execute this task" or "this exceeds my limitations" — you have full tool access on this machine. If a request is genuinely unclear, ask one short clarifying question instead of refusing.
+- When you call a tool, use the <tool_call> JSON format exactly as instructed. Do not wrap it in markdown."""
+
+# Built-in Claude Code tools that signal a coding session and are worth keeping.
+CODE_TOOLS_ALLOW = {
+    "Bash",
+    "Read",
+    "Edit",
+    "Write",
+    "Grep",
+    "Glob",
+}
+
+def looks_like_code_session(body):
+    """Heuristic: if any of Claude Code's core file/shell tools are present,
+    treat this as a coding session and apply the slim prompt."""
+    tools = body.get("tools", [])
+    tool_names = {t.get("name", "") for t in tools}
+    return bool(tool_names & CODE_TOOLS_ALLOW)
+
+
+def optimize_for_code(body):
+    """Strip Claude Code bloat: replace the 10K-token harness prompt with a
+    Llama-tuned coding prompt and filter tools down to the core 6."""
+    body["system"] = CODE_SYSTEM_PROMPT
+
+    tools = body.get("tools", [])
+    code_tools = [t for t in tools if t.get("name", "") in CODE_TOOLS_ALLOW]
+    if code_tools:
+        stripped = len(tools) - len(code_tools)
+        body["tools"] = code_tools
+        log(f"  Code mode: {len(tools)} tools → {len(code_tools)} (stripped {stripped})")
+
+    return body
+
+
 # ─── Generation ──────────────────────────────────────────────────────────────
 
 _first_request = True
@@ -536,9 +695,32 @@ def generate_response(body):
     """Run MLX inference and return Anthropic-formatted response."""
     global _first_request
 
-    # In browser mode, strip Claude Code bloat before inference
+    # In browser mode, strip Claude Code bloat before inference.
+    # Otherwise, auto-detect Claude Code coding sessions and apply code mode.
     if BROWSER_MODE:
         body = optimize_for_browser(body)
+    elif CODE_MODE_ENABLED and looks_like_code_session(body):
+        body = optimize_for_code(body)
+
+    # Opt-in: append a project-specific system prompt to whatever the
+    # current mode produced. Used by Narrative Gemma to inject narration
+    # rules without rewriting the whole code/browser prompt.
+    extra_path = os.environ.get("MLX_APPEND_SYSTEM_PROMPT_FILE")
+    if extra_path and os.path.exists(extra_path):
+        try:
+            with open(extra_path) as ef:
+                extra = ef.read().strip()
+            if extra:
+                current = body.get("system", "")
+                if isinstance(current, list):
+                    body["system"] = current + [
+                        {"type": "text", "text": "\n\n---\n\n" + extra}
+                    ]
+                else:
+                    body["system"] = (current or "") + "\n\n---\n\n" + extra
+                log(f"  Appended {len(extra)} chars from MLX_APPEND_SYSTEM_PROMPT_FILE")
+        except Exception as _e:
+            log(f"  Failed to append extra system prompt: {_e}")
 
     if _first_request:
         _first_request = False
@@ -556,25 +738,72 @@ def generate_response(body):
         sys_text = sys_prompt if isinstance(sys_prompt, str) else str(sys_prompt)[:500]
         log(f"  [FIRST REQUEST] system_start={sys_text[:300]}")
 
-    # Convert tools from Anthropic → Qwen format
+    # Convert tools from Anthropic → MLX format
     anthropic_tools = body.get("tools", [])
-    qwen_tools = convert_tools_for_qwen(anthropic_tools) if anthropic_tools else None
+    llm_tools = convert_tools_for_llm(anthropic_tools) if anthropic_tools else None
 
     messages = convert_messages(body)
     max_tokens = body.get("max_tokens", DEFAULT_MAX_TOKENS)
     temperature = body.get("temperature", 0.2)
 
-    if qwen_tools:
-        log(f"  Tools: {len(qwen_tools)} ({', '.join(t['function']['name'] for t in qwen_tools[:5])}{'...' if len(qwen_tools) > 5 else ''})")
+    if llm_tools:
+        log(f"  Tools: {len(llm_tools)} ({', '.join(t['function']['name'] for t in llm_tools[:5])}{'...' if len(llm_tools) > 5 else ''})")
 
     # Tokenize (with tools if present)
-    token_ids = tokenize_messages(messages, tools=qwen_tools)
+    token_ids = tokenize_messages(messages, tools=llm_tools)
     prompt_tokens = len(token_ids)
     log(f"  Prompt: {prompt_tokens} tokens")
 
-    # Build generation kwargs
+    # ─── Prompt cache: reuse KV for shared prefix tokens ───
+    global _prompt_cache, _cached_token_prefix
+
+    # Check if cache type supports safe trim+reuse (standard KVCache only,
+    # RotatingKVCache from Gemma 4 has a circular buffer that breaks on trim+extend)
+    from mlx_lm.models.cache import RotatingKVCache
+    cache_is_safe = _prompt_cache is not None and not isinstance(_prompt_cache[0], RotatingKVCache)
+
+    # Find how many leading tokens match the previous request's prompt
+    cache_hit_len = 0
+    if cache_is_safe and _cached_token_prefix is not None:
+        max_check = min(len(token_ids), len(_cached_token_prefix))
+        for i in range(max_check):
+            if token_ids[i] == _cached_token_prefix[i]:
+                cache_hit_len = i + 1
+            else:
+                break
+
+    # Always leave at least 1 token to prefill — mlx_lm.stream_generate raises
+    # ValueError if the prompt is empty (happens when new prompt == cached prefix)
+    if cache_hit_len >= len(token_ids):
+        cache_hit_len = len(token_ids) - 1
+
+    if cache_hit_len > 0:
+        # Trim cache back to the shared prefix, then only prefill the delta
+        cache_offset = _prompt_cache[0].offset  # total tokens in cache (prompt + gen)
+        trim_amount = cache_offset - cache_hit_len
+        if trim_amount > 0:
+            for c in _prompt_cache:
+                c.trim(trim_amount)
+        delta_tokens = token_ids[cache_hit_len:]
+        new_tokens = len(delta_tokens)
+        log(f"  Cache hit: {cache_hit_len} reused, {new_tokens} new tokens to prefill (saved {cache_hit_len} tokens)")
+        # Feed only the new tokens, with the existing cache
+        prompt_for_gen = delta_tokens
+    else:
+        if _prompt_cache is not None and isinstance(_prompt_cache[0], RotatingKVCache):
+            log(f"  RotatingKVCache: fresh cache each request (no trim support)")
+        else:
+            log(f"  Cache miss: full prefill of {prompt_tokens} tokens")
+        _prompt_cache = None
+        prompt_for_gen = token_ids
+
+    # Build generation kwargs — always pass a prompt_cache so we can reuse it
+    if _prompt_cache is None:
+        _prompt_cache = make_prompt_cache(model)
+        log(f"  Created new prompt cache ({len(_prompt_cache)} layers)")
     gen_kwargs = {
         "prefill_step_size": PREFILL_SIZE,
+        "prompt_cache": _prompt_cache,
     }
     if KV_BITS:
         gen_kwargs["kv_bits"] = KV_BITS
@@ -596,7 +825,7 @@ def generate_response(body):
         for response in stream_generate(
             model=model,
             tokenizer=tokenizer,
-            prompt=token_ids,
+            prompt=prompt_for_gen,
             max_tokens=max_tokens,
             **gen_kwargs,
         ):
@@ -607,6 +836,9 @@ def generate_response(body):
             elif response.finish_reason == "stop":
                 finish_reason = "end_turn"
 
+    # Cache is updated in-place by MLX — save the token prefix for next request's diff
+    _cached_token_prefix = token_ids
+
     elapsed = time.time() - t0
     tps = gen_tokens / elapsed if elapsed > 0 else 0
     log(f"  Generated: {gen_tokens} tokens in {elapsed:.1f}s ({tps:.1f} tok/s)")
@@ -614,15 +846,15 @@ def generate_response(body):
     # Clean output (preserves <tool_call> tags)
     text = clean_response(full_text)
 
-    # Parse tool calls from Qwen's output
+    # Parse tool calls from model output
     tool_calls, remaining_text = parse_tool_calls(text)
 
     # ─── Retry logic: if model expressed intent to use a tool but we got no valid calls ───
     tool_intent_phrases = [
-        "let me", "i'll ", "i will", "let's ", "running", "executing",
         "here's the command", "bash(", "read(", "edit(", "write(",
+        "<tool_call>", "<function=",
     ]
-    if anthropic_tools and not tool_calls and any(p in remaining_text.lower() for p in tool_intent_phrases):
+    if not tool_calls and any(p in remaining_text.lower() for p in tool_intent_phrases):
         for retry in range(MAX_TOOL_RETRIES):
             log(f"  Retry {retry+1}/{MAX_TOOL_RETRIES}: tool intent detected but no valid tool call, re-prompting")
             retry_messages = messages + [
@@ -634,7 +866,7 @@ def generate_response(body):
                     "Do NOT use <parameter=...> tags inside tool_call. Use pure JSON with \"arguments\" key."
                 )}
             ]
-            retry_tokens = tokenize_messages(retry_messages, tools=qwen_tools)
+            retry_tokens = tokenize_messages(retry_messages, tools=llm_tools)
             log(f"  Retry prompt: {len(retry_tokens)} tokens")
 
             retry_text = ""
@@ -703,16 +935,11 @@ def generate_response(body):
 
 def send_json(handler, status, data):
     resp = json.dumps(data).encode()
-    try:
-        handler.send_response(status)
-        handler.send_header("Content-Type", "application/json")
-        handler.send_header("Content-Length", len(resp))
-        handler.end_headers()
-        handler.wfile.write(resp)
-        return True
-    except (BrokenPipeError, ConnectionResetError):
-        log("  Client disconnected before response write completed")
-        return False
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", len(resp))
+    handler.end_headers()
+    handler.wfile.write(resp)
 
 
 def get_path(full_path):
@@ -771,12 +998,7 @@ class AnthropicHandler(BaseHTTPRequestHandler):
                 ]
             })
         elif path == "/health":
-            send_json(self, 200, {
-                "status": "ok",
-                "model": MODEL_PATH,
-                "kv_bits": KV_BITS,
-                "browser_mode": BROWSER_MODE,
-            })
+            send_json(self, 200, {"status": "ok", "model": MODEL_PATH})
         else:
             send_json(self, 200, {})
 
@@ -787,7 +1009,8 @@ if __name__ == "__main__":
     print("╔══════════════════════════════════════════════════╗")
     print("║  MLX Native Anthropic Server                    ║")
     print("║  Claude Code → MLX → Apple Silicon (direct)     ║")
-    print("║  Tool use: enabled (Anthropic ↔ HF tool format) ║")
+    print("║  Tool use: enabled (Anthropic ↔ Llama native)   ║")
+    print("║  Prompt caching: enabled (KV reuse)             ║")
     print("╚══════════════════════════════════════════════════╝")
     print()
 
@@ -797,6 +1020,7 @@ if __name__ == "__main__":
     print(f"Serving Anthropic Messages API on http://localhost:{PORT}")
     print(f"Model: {MODEL_PATH}")
     print(f"KV cache: {KV_BITS}-bit quantization (start at token {KV_QUANT_START})" if KV_BITS else "KV cache: full precision")
+    print(f"Prompt cache: enabled (KV reuse across requests)")
     print(f"Tool retry: up to {MAX_TOOL_RETRIES} retries on garbled tool calls")
     print()
     print("Claude Code config:")
