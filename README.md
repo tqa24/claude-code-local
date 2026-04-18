@@ -16,6 +16,35 @@
   </p>
 </p>
 
+---
+
+<p align="center">
+  <h2 align="center">🎬 WATCH THE DEMO — AirGap AI</h2>
+  <p align="center">
+    <strong>A real NDA. Llama 3.3 70B. Wi-Fi physically OFF. <code>lsof</code> running live.<br>
+    Watch a 70-billion-parameter model audit a confidential legal document, on-device, with the receipts on screen.</strong>
+  </p>
+  <p align="center">
+    <a href="https://www.youtube.com/watch?v=V_J1LpNGwmY">
+      <img src="https://img.youtube.com/vi/V_J1LpNGwmY/maxresdefault.jpg" width="720" alt="AirGap AI — Wi-Fi OFF NDA Demo">
+    </a>
+  </p>
+  <p align="center">
+    <a href="https://www.youtube.com/watch?v=V_J1LpNGwmY">
+      <img src="https://img.shields.io/badge/▶_Watch_on_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch on YouTube">
+    </a>
+    &nbsp;
+    <a href="https://www.youtube.com/@nicedreamzapps">
+      <img src="https://img.shields.io/badge/Subscribe-@nicedreamzapps-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Subscribe">
+    </a>
+  </p>
+  <p align="center">
+    <em>Built for lawyers, accountants, doctors, therapists, contractors — anyone handling other people's private stuff.</em>
+  </p>
+</p>
+
+---
+
 > ## 🧩 You're looking at the **BRAIN** of a three-repo local-first ambient-computing stack
 >
 > Pair it with its sibling repos for the full experience:
