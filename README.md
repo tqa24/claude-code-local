@@ -270,7 +270,7 @@ How long to ask Claude Code to write a function:
 | 😐 llama.cpp + Proxy | 133 s |
 | 🔥 **MLX Native (no proxy)** | **17.6 s** |
 
-> **7.5× faster ⚡** — one change (killing the proxy) produced the entire delta. ~800 lines of Python, no C++ fork, no generic inference backend.
+> **7.5× faster ⚡** — one change (killing the proxy) produced the entire delta. ~1000 lines of Python, no C++ fork, no generic inference backend.
 
 ### 🥊 Lineup Comparison
 
@@ -451,6 +451,12 @@ bash setup.sh
 `setup.sh` auto-detects your RAM, picks a model from the lineup, downloads it, installs the MLX server, and creates a `Claude Local.command` launcher on your Desktop.
 
 **Then double-click `Claude Local.command`.** You're coding locally.
+
+> 🐛 **If the launcher asks you to sign in to a Claude account:** your `claude` CLI is too old. The launchers pass `--bare` to force local-only API-key auth, but older versions of the CLI don't support that flag and fall through to the Anthropic login prompt. Fix:
+> ```bash
+> npm install -g @anthropic-ai/claude-code
+> claude --version   # should print a recent version
+> ```
 
 > 🛠️ **Note for contributors / hackers:** `setup.sh` installs the server as a **symlink** at `~/.local/mlx-native-server/server.py` pointing back at this repo's `proxy/server.py`. Edit the file in the repo, restart the MLX server, done — no re-running `setup.sh`, no copying, no silent drift between "what I committed" and "what's actually running." There is one source of truth for the server, and it's `proxy/server.py` in the repo.
 
@@ -637,8 +643,8 @@ This setup doesn't die. **Apple's on-device speech engine is a fully local model
 
 ```bash
 # 1. Install this repo (claude-code-local) — gives you the MLX server + Narrative launcher
-git clone https://github.com/nicedreamzapp/claude-code-local.git "~/Desktop/Local AI Setup"
-cd "~/Desktop/Local AI Setup" && bash setup.sh
+git clone https://github.com/nicedreamzapp/claude-code-local.git "$HOME/Desktop/Local AI Setup"
+cd "$HOME/Desktop/Local AI Setup" && bash setup.sh
 
 # 2. Install the sibling NarrateClaude repo — gives you the listening pipeline
 git clone https://github.com/nicedreamzapp/NarrateClaude.git ~/NarrateClaude
