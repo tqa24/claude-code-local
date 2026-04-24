@@ -13,6 +13,7 @@
     <a href="#-hands-free-voice-mode--the-whole-loop-on-device"><img src="https://img.shields.io/badge/🎤_Voice-Hands_Free-orange?style=for-the-badge" alt="Hands-Free Voice"></a>
     <a href="#-the-complete-local-first-stack"><img src="https://img.shields.io/badge/🪴_Ambient-Computing-ff69b4?style=for-the-badge" alt="Ambient Computing"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/📜_License-MIT-yellow?style=for-the-badge" alt="MIT"></a>
+    <a href="https://discord.gg/ZdSqgAxUW"><img src="https://img.shields.io/discord/1497121921580404818?label=NiceDreamzApps&logo=discord&color=5865F2&style=for-the-badge" alt="Join the NiceDreamzApps Discord"></a>
   </p>
   <p align="center">
     <em>Built by <a href="https://x.com/NiceDreamzApps">Matt Macosko</a> in Arcata, CA. Started with a chicken problem. Still figuring it out.</em>
@@ -544,6 +545,64 @@ The server (`proxy/server.py`) is **one file, ~1000 lines**. It does six things:
 
 ---
 
+## 🔌 MCP Servers — Claude Code's plugin ecosystem, 100% local
+
+> **The only way to run Claude Code's full MCP plugin ecosystem 100% local on Apple Silicon.**
+
+Claude Code talks to the world through **MCP servers** — Anthropic's plugin protocol. There's a fast-growing ecosystem of them: filesystem, GitHub, Postgres, Slack, web search, Apple Notes, Notion, Chrome DevTools, and a couple hundred more. They're how Claude Code reads your files, browses the web, queries your databases, controls your browser.
+
+Most local-LLM proxies break MCP. They strip the tool definitions, mangle the `tool_use` blocks, or refuse to forward the streaming format Claude Code expects. So even if you swap in a "Claude alternative," your plugins stop working.
+
+`claude-code-local` doesn't break MCP. The proxy passes tool definitions through to your local model and translates the model's `tool_use` blocks back into Anthropic's format — across all three model families (Gemma 4 native, Llama 3.3 raw JSON, Qwen `<tool_call>` JSON), with garbled-output recovery for small models. From Claude Code's perspective it's talking to Anthropic. From your MCP server's perspective, the same Claude Code is calling it. Nothing in the middle changes.
+
+### How to plug in a server
+
+Wire MCP servers up the normal Claude Code way (`~/.claude.json` or per-project `.mcp.json`). Make sure your `ANTHROPIC_BASE_URL` is pointed at the local proxy, then add the server. Three quick examples:
+
+**1. Filesystem — let the local model read/write a folder**
+
+```bash
+# Anthropic's reference filesystem MCP server
+claude mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem ~/projects
+```
+
+Now you can launch Claude Code (any of the launchers in `launchers/`) and ask it to *"summarize every README in `~/projects`"* — it'll call the filesystem MCP server, which streams files back to your local Gemma/Qwen, which writes the summary. Zero cloud round-trips.
+
+**2. GitHub — issues, PRs, code search, all local**
+
+```bash
+claude mcp add github --env GITHUB_TOKEN=$GITHUB_TOKEN -- npx -y @modelcontextprotocol/server-github
+```
+
+Now your local model can read GitHub issues, draft PRs, search code across repos. The model still runs on your Mac; only the GitHub API calls leave the building (which is fine — that's GitHub's data, not yours).
+
+**3. Web search — for when the local model needs fresh info**
+
+```bash
+# Brave Search MCP (free tier, no PII)
+claude mcp add brave-search --env BRAVE_API_KEY=$BRAVE_API_KEY -- npx -y @modelcontextprotocol/server-brave-search
+```
+
+Now your local Gemma can answer *"what's the latest version of MLX?"* without hallucinating.
+
+### `MLX_BROWSER_MODE` — optimized for chrome-devtools MCP
+
+Claude Code's chrome-devtools MCP integration sends a 30+ tool list and a 10K-token system prompt to every request. That's fine for cloud Claude. It's death for a local model.
+
+Set `MLX_BROWSER_MODE=1` when starting the proxy and it auto-detects Claude Code MCP browser sessions (by looking for `mcp__chrome-devtools__*` tool registrations), strips the bloat, and keeps only the 9 essential browser-control tools. Same browser automation, ~99% fewer tokens to chew through.
+
+```bash
+MLX_BROWSER_MODE=1 ./scripts/start-mlx-server.sh
+```
+
+Direct clients (anything that brings its own system prompt + tools) are passed through untouched — only Claude Code MCP sessions get the optimization.
+
+### What this unlocks
+
+Honestly the whole MCP ecosystem becomes available to you with no compromise. Every tool the cloud-Claude-Code-using developer has — filesystem, GitHub, web search, browser automation, database access, calendar, anything someone has shipped an MCP server for — works the same against your local Gemma or Qwen. The 200+ tool universe is yours, just running on your machine instead of someone else's.
+
+---
+
 ## 🌐 Browser Agent
 
 A standalone browser agent that controls your **real Brave browser** via Chrome DevTools Protocol — powered entirely by local AI. No Claude Code wrapper needed.
@@ -848,6 +907,18 @@ Find me:
   <a href="https://github.com/nicedreamzapp"><img src="https://img.shields.io/badge/GitHub-@nicedreamzapp-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub"></a>
   <a href="https://www.instagram.com/divinetribevaporizers/"><img src="https://img.shields.io/badge/Instagram-@divinetribevaporizers-E4405F?style=flat-square&logo=instagram&logoColor=white" alt="Instagram"></a>
 </p>
+
+---
+
+## 💬 Community
+
+A Discord for builders running, contributing to, or hacking on `claude-code-local`, `NarrateClaude`, and `browser-agent`. Share what you're building, ask questions, swap MLX tips. Quiet, builder-tone, no bots.
+
+<p align="center">
+  <a href="https://discord.gg/ZdSqgAxUW"><img src="https://img.shields.io/discord/1497121921580404818?label=Join%20NiceDreamzApps%20on%20Discord&logo=discord&color=5865F2&style=for-the-badge" alt="Join the NiceDreamzApps Discord"></a>
+</p>
+
+👉 **[discord.gg/ZdSqgAxUW](https://discord.gg/ZdSqgAxUW)**
 
 ---
 
