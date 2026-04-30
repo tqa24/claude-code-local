@@ -113,6 +113,25 @@
 
 ---
 
+<p align="center">
+  <h3 align="center">🏠 New — My Mac mini at home is the AI. I just talk to it from any browser.</h3>
+  <p align="center">
+    <em>Open any browser on any phone — chat with the Mac mini at home, hear it reply in your own cloned voice. 0:50.</em>
+  </p>
+  <p align="center">
+    <a href="https://www.youtube.com/watch?v=k505IMnCSjc">
+      <img src="https://img.youtube.com/vi/k505IMnCSjc/maxresdefault.jpg" width="540" alt="My Mac mini at home is the AI — browser-anywhere demo">
+    </a>
+  </p>
+  <p align="center">
+    <a href="https://www.youtube.com/watch?v=k505IMnCSjc"><img src="https://img.shields.io/badge/▶_Watch_on_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch"></a>
+    &nbsp;
+    <a href="https://www.youtube.com/@nicedreamzapps"><img src="https://img.shields.io/badge/Subscribe-@nicedreamzapps-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Subscribe"></a>
+  </p>
+</p>
+
+---
+
 > ## 🧩 This repo is the **BRAIN** of a 4-part local-first ambient-computing stack
 >
 > Brain (here) · 🎤 Ears+Mouth · 🌐 Hands · 📱 Phone. Each repo stands alone; together they take Claude Code off the keyboard and off the screen. **[Jump to the stack diagram →](#-the-complete-local-first-stack)**
