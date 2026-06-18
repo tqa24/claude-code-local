@@ -76,10 +76,6 @@
     <a href="https://nicedreamzwholesale.com/airgap-box/">
       <img src="https://img.shields.io/badge/🖥️_AirGap_Box-Pre--configured_Mac_mini_%E2%80%94_Waitlist_Open-1f5d3a?style=for-the-badge" alt="AirGap Box waitlist">
     </a>
-    &nbsp;
-    <a href="https://nicedreamzwholesale.com/product/airgap-agents/">
-      <img src="https://img.shields.io/badge/⚡_Agent_Pack-%2419_one--time-c79100?style=for-the-badge" alt="AirGap Agents $19 one-time">
-    </a>
   </p>
 </p>
 
@@ -994,7 +990,7 @@ If this repo is useful to you, here's the rest of the work:
 
 | | |
 |---|---|
-| 🔒 **[AirGap AI](https://nicedreamzwholesale.com/airgap/)** | Private, on-device AI consulting for law firms, accountants, doctors, therapists — anyone handling other people's confidential work. Book a 15-min call. |
+| 🔒 **[AirGap AI](https://nicedreamzwholesale.com/airgap/)** | Local AI partnership for firms that can't put client work in someone else's cloud — law, accounting, medical, therapy. I install on-device AI inside your office, train your team, and keep your stack on the current best open-source model as the field evolves (signed USB w/ checksums, or in-person install — your call). One firm at a time. Book a 15-min call. |
 | 🖥️ **[Nice Dreamz Software](https://nicedreamzwholesale.com/software/)** | The rest of the open-source lineup — NarrateClaude, the browser agent, CemaniHomesteadRobot, VisionBuilder, and more. |
 | 🌿 **[Divine Tribe](https://ineedhemp.com)** | The hardware side — Core XL, V5, Ruby Twist. 13 years of building physical products. |
 | 📰 **[Marijuana Union](https://marijuanaunion.com)** | Community + news site. Where the long-form writing lives. |
