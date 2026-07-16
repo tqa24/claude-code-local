@@ -81,6 +81,20 @@
 
 ---
 
+## 📱 Real apps shipped on this stack
+
+The same local pipeline behind this repo ships real iPhone apps — built start-to-finish on Apple Silicon, no subscriptions:
+
+| App | What it is |
+|---|---|
+| [🎙 Song Forge](https://apps.apple.com/us/app/id6788616929) | Describe a song, own a finished original in minutes — rendered on my Macs at home ([try the web app](https://songforge.nicedreamzwholesale.com)) |
+| [👁️ RealTime AI Cam](https://apps.apple.com/us/app/id6751230739) | Detects 601 object classes on-device, free, no cloud |
+| [🪐 RealTime Space](https://apps.apple.com/us/app/id6788646103) | Photoreal solar system on your phone, real NASA imagery |
+
+All of them: **[nicedreamzwholesale.com/software](https://nicedreamzwholesale.com/software/)**
+
+---
+
 <p align="center">
   <h2 align="center">🌌 THE REMATCH — 4 AI Engines Build Northern Lights, 3 Fully Local</h2>
   <p align="center">
